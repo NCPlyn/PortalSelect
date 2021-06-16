@@ -1,0 +1,5 @@
+.vs
+Libs/*
+!Libs/DLL files here
+PortalSelect/bin
+PortalSelect/obj
