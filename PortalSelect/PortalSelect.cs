@@ -7,6 +7,7 @@ using UIExpansionKit.API;
 using VRC.Core;
 using UnhollowerRuntimeLib.XrefScans;
 using System.Reflection;
+using System.Collections;
 
 namespace PortalSelect
 {
@@ -15,7 +16,7 @@ namespace PortalSelect
         public const string Name = "PortalSelect";
         public const string Author = "NCPlyn";
         public const string Company = "NCPlyn";
-        public const string Version = "0.1.0";
+        public const string Version = "0.1.1";
         public const string DownloadLink = "https://github.com/NCPlyn/PortalSelect";
     }
 
@@ -24,7 +25,18 @@ namespace PortalSelect
         GameObject ControllerRight;
         public const string RightTrigger = "Oculus_CrossPlatform_SecondaryIndexTrigger";
 
-        public override void VRChat_OnUiManagerInit()
+        public override void OnApplicationStart()
+        {
+            MelonCoroutines.Start(UiManagerInitializer());
+        }
+
+        private IEnumerator UiManagerInitializer()
+        {
+            while (VRCUiManager.prop_VRCUiManager_0 == null) yield return null;
+            OnUiManagerInit();
+        }
+
+        private void OnUiManagerInit()
         {
             if (Environment.CurrentDirectory.Contains("vrchat-vrchat"))
             {
@@ -68,7 +80,7 @@ namespace PortalSelect
 
         public void OpenPortalPage()
         {
-            Vector3 rforward,rposition;
+            Vector3 rforward, rposition;
 
             if (XRDevice.isPresent) {
                 rforward = ControllerRight.transform.forward;
@@ -84,17 +96,18 @@ namespace PortalSelect
                 PortalInternal portalGet = hit2.collider.gameObject.GetComponentInChildren<PortalInternal>();
                 if (portalGet)
                 {
-                    string instanceID = portalGet.field_Private_String_1;
+                    var instanceID = new ApiWorldInstance { name = portalGet.field_Private_String_1, instanceId = portalGet.field_Private_String_1, count = portalGet.field_Private_Int32_0 };
 
                     var world = new ApiWorld { id = portalGet.field_Private_ApiWorld_0.id };
+
                     world.Fetch(new Action<ApiContainer>(_ =>
                     {
-                        if (instanceID != null) {
-                            ScanningReflectionCache.DisplayWorldInfoPage(world, instanceID, true);
+                        if (portalGet.field_Private_String_1 != null) {
+                            ScanningReflectionCache.DisplayWorldInfoPage(world, instanceID, true, null);
                         } else {
-                            ScanningReflectionCache.DisplayWorldInfoPage(world, null, false);
+                            ScanningReflectionCache.DisplayWorldInfoPage(world, null, false, null);
                         }
-                        
+
                     }), new Action<ApiContainer>(c =>
                     {
                         if (MelonDebug.IsEnabled())
@@ -119,22 +132,23 @@ namespace PortalSelect
 
     public static class ScanningReflectionCache
     {
-        private static Action<ApiWorld, string, bool>? ourShowWorldInfoPageDelegate;
+        private static Action<ApiWorld, ApiWorldInstance?, bool, APIUser?>? ourShowWorldInfoPageDelegate;
 
-        public static void DisplayWorldInfoPage(ApiWorld world, string instanceId, bool hasInstanceId)
+        public static void DisplayWorldInfoPage(ApiWorld world, ApiWorldInstance? instance, bool hasInstanceId, APIUser? user)
         {
             if (ourShowWorldInfoPageDelegate == null)
             {
                 var target = typeof(UiWorldList)
                     .GetMethods(BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.Static).Single(it =>
-                        it.Name.StartsWith("Method_Public_Static_Void_ApiWorld_String_Boolean") &&
+                        it.Name.StartsWith("Method_Public_Static_Void_ApiWorld_ApiWorldInstance_Boolean_APIUser_") &&
                         XrefScanner.XrefScan(it).Any(jt =>
                             jt.Type == XrefType.Global && jt.ReadAsObject()?.ToString() ==
                             "UserInterface/MenuContent/Screens/WorldInfo"));
 
-                ourShowWorldInfoPageDelegate = (Action<ApiWorld, string, bool>)Delegate.CreateDelegate(typeof(Action<ApiWorld, string, bool>), target);
+                ourShowWorldInfoPageDelegate = (Action<ApiWorld, ApiWorldInstance?, bool, APIUser?>)Delegate.CreateDelegate(typeof(Action<ApiWorld, ApiWorldInstance?, bool, APIUser?>), target);
             }
-            ourShowWorldInfoPageDelegate(world, instanceId, hasInstanceId);
+
+            ourShowWorldInfoPageDelegate(world, instance, hasInstanceId, user);
         }
     }
 }
