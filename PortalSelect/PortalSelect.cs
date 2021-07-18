@@ -16,14 +16,15 @@ namespace PortalSelect
         public const string Name = "PortalSelect";
         public const string Author = "NCPlyn";
         public const string Company = "NCPlyn";
-        public const string Version = "0.1.2";
+        public const string Version = "0.1.3";
         public const string DownloadLink = "https://github.com/NCPlyn/PortalSelect";
     }
 
     public class PortalSelect : MelonMod
     {
-        GameObject ControllerRight;
+        GameObject ControllerRight, ControllerLeft;
         public const string RightTrigger = "Oculus_CrossPlatform_SecondaryIndexTrigger";
+        public const string LeftTrigger = "Oculus_CrossPlatform_PrimaryIndexTrigger";
 
         public override void OnApplicationStart()
         {
@@ -41,60 +42,76 @@ namespace PortalSelect
             if (Environment.CurrentDirectory.Contains("vrchat-vrchat"))
             {
                 ControllerRight = GameObject.Find("/_Application/TrackingVolume/TrackingOculus(Clone)/OVRCameraRig/TrackingSpace/RightHandAnchor/PointerOrigin (1)");
+                ControllerLeft = GameObject.Find("/_Application/TrackingVolume/TrackingOculus(Clone)/OVRCameraRig/TrackingSpace/LeftHandAnchor/PointerOrigin (1)");
             }
             else
             {
                 ControllerRight = GameObject.Find("/_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Controller (right)/PointerOrigin");
+                ControllerLeft = GameObject.Find("/_Application/TrackingVolume/TrackingSteam(Clone)/SteamCamera/[CameraRig]/Controller (left)/PointerOrigin");
             }
 
             if (!XRDevice.isPresent)
             {
                 ExpansionKitApi.GetExpandedMenu(ExpandedMenu.WorldMenu).AddSimpleButton("Select Portal", () =>
                 {
-                    OpenPortalPage();
+                    OpenPortalPage(null);
                 });
             }
             MelonLogger.Msg("Init done");
         }
 
-        public bool TriggerIsDown
+        public bool? TriggerIsDown
         {
             get
             {
-                return Input.GetButtonDown(RightTrigger) || Input.GetAxisRaw(RightTrigger) != 0 || Input.GetAxis(RightTrigger) >= 0.75f;
+                if (Input.GetButtonDown(RightTrigger) || Input.GetAxisRaw(RightTrigger) != 0 || Input.GetAxis(RightTrigger) >= 0.75f) return true;
+                else if (Input.GetButtonDown(LeftTrigger) || Input.GetAxisRaw(LeftTrigger) != 0 || Input.GetAxis(LeftTrigger) >= 0.75f) return false;
+                else return null;
             }
         }
 
-        bool conti = true;
-        public override void OnUpdate() //checking for pressed trigger and open/close of Worlds page
+        bool conti = true, released = true;
+        public override void OnUpdate() //checking for pressed/unpressed trigger and open/close of Worlds page
         {
-            if(TriggerIsDown && conti && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active)
+            if(TriggerIsDown == true || TriggerIsDown == false)
             {
-                conti = false;
-                OpenPortalPage();
-            } else if(conti == false && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active == false)
+                if(released && conti && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active)
+                {
+                    conti = false;
+                    OpenPortalPage(TriggerIsDown);
+                }
+                released = false;
+            } else if (conti == false && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active == false)
             {
                 conti = true;
+            } else if (TriggerIsDown == null)
+            {
+                released = true;
             }
         }
 
-        public void OpenPortalPage()
+        public void OpenPortalPage(bool? whichController)
         {
             //get position and rotation of object to start raycast from
             Vector3 rforward, rposition;
-            if (XRDevice.isPresent) {
+            if(whichController == true) //true if right, false if left, null should get here only if desktop
+            {
                 rforward = ControllerRight.transform.forward;
                 rposition = ControllerRight.transform.position;
-            } else {
+            } else if (whichController == false)
+            {
+                rforward = ControllerLeft.transform.forward;
+                rposition = ControllerLeft.transform.position;
+            } else
+            {
                 rforward = VRCPlayer.field_Internal_Static_VRCPlayer_0.transform.forward;
                 rposition = VRCPlayer.field_Internal_Static_VRCPlayer_0.transform.position;
             }
 
-            RaycastHit hit2;
-            if (Physics.Raycast(rposition, rforward, out hit2, 300f)) //if ray hit anything
+            if (Physics.Raycast(rposition, rforward, out RaycastHit hit2, 300f)) //if ray hit anything
             {
                 PortalInternal portalGet = hit2.collider.gameObject.GetComponentInChildren<PortalInternal>();
-                if (portalGet) //and it is object with PortalInternal
+                if (portalGet) //and it is object with PortalInternal **I think, from here it can be broken easily by game update**
                 {
                     var insString = portalGet.field_Private_String_1; //get instanceID from portal
                     var world = new ApiWorld { id = portalGet.field_Private_ApiWorld_0.id }; //get worldID from portal
