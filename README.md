@@ -1,6 +1,6 @@
 # PortalSelect
 
-Mod for VRChat / MelonLoader 0.4.0 to open the world info page of portal.\
+Mod for VRChat / MelonLoader 0.4.3 to open the world info page of portal.\
 If portal points to specific instance, it will open that specific world instance.\
 Made this mod because I wanted to visit the portal worlds later. So save the world to favorites without entering it.\
 \

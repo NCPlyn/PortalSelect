@@ -16,7 +16,7 @@ namespace PortalSelect
         public const string Name = "PortalSelect";
         public const string Author = "NCPlyn";
         public const string Company = "NCPlyn";
-        public const string Version = "0.1.3";
+        public const string Version = "0.1.4";
         public const string DownloadLink = "https://github.com/NCPlyn/PortalSelect";
     }
 
@@ -70,20 +70,16 @@ namespace PortalSelect
             }
         }
 
-        bool conti = true, released = true;
-        public override void OnUpdate() //checking for pressed/unpressed trigger and open/close of Worlds page
+        bool released = true;
+        public override void OnUpdate() //checking for pressed/unpressed trigger and opened Worlds page
         {
-            if(TriggerIsDown == true || TriggerIsDown == false)
+            if(TriggerIsDown != null)
             {
-                if(released && conti && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active)
+                if(released && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active)
                 {
-                    conti = false;
                     OpenPortalPage(TriggerIsDown);
                 }
                 released = false;
-            } else if (conti == false && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active == false)
-            {
-                conti = true;
             } else if (TriggerIsDown == null)
             {
                 released = true;
