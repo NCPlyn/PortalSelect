@@ -3,6 +3,7 @@ using System.Linq;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.XR;
+using UnityEngine.UI;
 using UIExpansionKit.API;
 using VRC.Core;
 using UnhollowerRuntimeLib.XrefScans;
@@ -16,7 +17,7 @@ namespace PortalSelect
         public const string Name = "PortalSelect";
         public const string Author = "NCPlyn";
         public const string Company = "NCPlyn";
-        public const string Version = "0.1.4";
+        public const string Version = "0.1.5";
         public const string DownloadLink = "https://github.com/NCPlyn/PortalSelect";
     }
 
@@ -75,7 +76,7 @@ namespace PortalSelect
         {
             if(TriggerIsDown != null)
             {
-                if(released && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active)
+                if(released && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active || GameObject.Find("UserInterface/QuickMenu/ShortcutMenu").active) //open while Worlds screen is active
                 {
                     OpenPortalPage(TriggerIsDown);
                 }
@@ -109,6 +110,9 @@ namespace PortalSelect
                 PortalInternal portalGet = hit2.collider.gameObject.GetComponentInChildren<PortalInternal>();
                 if (portalGet) //and it is object with PortalInternal **I think, from here it can be broken easily by game update**
                 {
+					if(GameObject.Find("UserInterface/QuickMenu/ShortcutMenu").active)
+						GameObject.Find("UserInterface/QuickMenu/ShortcutMenu/WorldsButton").GetComponent<Button>().Press(); //without this you cannot get back from the worldinfo screen
+					
                     var insString = portalGet.field_Private_String_1; //get instanceID from portal
                     var world = new ApiWorld { id = portalGet.field_Private_ApiWorld_0.id }; //get worldID from portal
                     string insName, insOwner = null;

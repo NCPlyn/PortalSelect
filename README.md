@@ -13,7 +13,7 @@ Giving big thank you to them.
 
 # Usage:
 ## VR
-- Open Worlds page menu
+- Open QuckMenu or Worlds page
 - Point at portal
 - With the controller you are pointing with, press trigger
 ## Desktop
