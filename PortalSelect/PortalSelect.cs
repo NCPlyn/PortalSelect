@@ -17,7 +17,7 @@ namespace PortalSelect
         public const string Name = "PortalSelect";
         public const string Author = "NCPlyn";
         public const string Company = "NCPlyn";
-        public const string Version = "0.1.5";
+        public const string Version = "0.1.6";
         public const string DownloadLink = "https://github.com/NCPlyn/PortalSelect";
     }
 
@@ -76,7 +76,8 @@ namespace PortalSelect
         {
             if(TriggerIsDown != null)
             {
-                if(released && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active || GameObject.Find("UserInterface/QuickMenu/ShortcutMenu").active) //open while Worlds screen is active
+                var existsQM = GameObject.Find("UserInterface/Canvas_QuickMenu(Clone)").active;
+                if (released && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active || existsQM != null) //open while Worlds screen is active
                 {
                     OpenPortalPage(TriggerIsDown);
                 }
@@ -110,8 +111,9 @@ namespace PortalSelect
                 PortalInternal portalGet = hit2.collider.gameObject.GetComponentInChildren<PortalInternal>();
                 if (portalGet) //and it is object with PortalInternal **I think, from here it can be broken easily by game update**
                 {
-					if(GameObject.Find("UserInterface/QuickMenu/ShortcutMenu").active)
-						GameObject.Find("UserInterface/QuickMenu/ShortcutMenu/WorldsButton").GetComponent<Button>().Press(); //without this you cannot get back from the worldinfo screen
+                    var existsQM = GameObject.Find("UserInterface/Canvas_QuickMenu(Clone)"); //dumb fix
+                    if (existsQM !=null)
+						GameObject.Find("UserInterface/Canvas_QuickMenu(Clone)/Container/Window/QMParent/Menu_Dashboard/ScrollRect/Viewport/VerticalLayoutGroup/Buttons_QuickLinks/Button_Worlds").GetComponent<Button>().Press(); //without this you cannot get back from the worldinfo screen
 					
                     var insString = portalGet.field_Private_String_1; //get instanceID from portal
                     var world = new ApiWorld { id = portalGet.field_Private_ApiWorld_0.id }; //get worldID from portal
