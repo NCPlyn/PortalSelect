@@ -6,6 +6,7 @@ using UnityEngine.XR;
 using UnityEngine.UI;
 using UIExpansionKit.API;
 using VRC.Core;
+using VRC.UI.Core;
 using UnhollowerRuntimeLib.XrefScans;
 using System.Reflection;
 using System.Collections;
@@ -17,7 +18,7 @@ namespace PortalSelect
         public const string Name = "PortalSelect";
         public const string Author = "NCPlyn";
         public const string Company = "NCPlyn";
-        public const string Version = "0.1.6";
+        public const string Version = "0.1.7";
         public const string DownloadLink = "https://github.com/NCPlyn/PortalSelect";
     }
 
@@ -26,6 +27,7 @@ namespace PortalSelect
         GameObject ControllerRight, ControllerLeft;
         public const string RightTrigger = "Oculus_CrossPlatform_SecondaryIndexTrigger";
         public const string LeftTrigger = "Oculus_CrossPlatform_PrimaryIndexTrigger";
+        private GameObject QuickMenuObject;
 
         public override void OnApplicationStart()
         {
@@ -35,6 +37,9 @@ namespace PortalSelect
         private IEnumerator UiManagerInitializer()
         {
             while (VRCUiManager.prop_VRCUiManager_0 == null) yield return null;
+            while (UIManager.field_Private_Static_UIManager_0 == null) yield return null;
+            while (GameObject.Find("UserInterface").GetComponentInChildren<VRC.UI.Elements.QuickMenu>(true) == null) yield return null;
+            QuickMenuObject = GameObject.Find("UserInterface").GetComponentInChildren<VRC.UI.Elements.QuickMenu>(true).gameObject;
             OnUiManagerInit();
         }
 
@@ -72,12 +77,11 @@ namespace PortalSelect
         }
 
         bool released = true;
-        public override void OnUpdate() //checking for pressed/unpressed trigger and opened Worlds page
+        public override void OnUpdate() //checking for pressed/unpressed trigger and active objects
         {
             if(TriggerIsDown != null)
             {
-                var existsQM = GameObject.Find("UserInterface/Canvas_QuickMenu(Clone)").active;
-                if (released && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active || existsQM != null) //open while Worlds screen is active
+                if (released && GameObject.Find("UserInterface/MenuContent/Screens/Worlds").active || QuickMenuObject.active) //open while Worlds screen or quickmenu is active
                 {
                     OpenPortalPage(TriggerIsDown);
                 }
@@ -106,35 +110,44 @@ namespace PortalSelect
                 rposition = VRCPlayer.field_Internal_Static_VRCPlayer_0.transform.position;
             }
 
-            if (Physics.Raycast(rposition, rforward, out RaycastHit hit2, 300f)) //if ray hit anything
+            int layerMask = 1 << 4;
+
+            if (Physics.Raycast(rposition, rforward, out RaycastHit hit2, 1000f, layerMask)) //if ray hit anything
             {
                 PortalInternal portalGet = hit2.collider.gameObject.GetComponentInChildren<PortalInternal>();
-                if (portalGet) //and it is object with PortalInternal **I think, from here it can be broken easily by game update**
+                if (portalGet) //and it is object with PortalInternal **I think, from here it can be broken easily by game update** (and it happened with addition of US-East/West)
                 {
-                    var existsQM = GameObject.Find("UserInterface/Canvas_QuickMenu(Clone)"); //dumb fix
-                    if (existsQM !=null)
+                    if (QuickMenuObject.active)
 						GameObject.Find("UserInterface/Canvas_QuickMenu(Clone)/Container/Window/QMParent/Menu_Dashboard/ScrollRect/Viewport/VerticalLayoutGroup/Buttons_QuickLinks/Button_Worlds").GetComponent<Button>().Press(); //without this you cannot get back from the worldinfo screen
 					
-                    var insString = portalGet.field_Private_String_1; //get instanceID from portal
+                    var insString = portalGet.field_Private_String_4; //get instanceID from portal
                     var world = new ApiWorld { id = portalGet.field_Private_ApiWorld_0.id }; //get worldID from portal
                     string insName, insOwner = null;
                     InstanceAccessType insType = InstanceAccessType.Public; //default to public
-                    NetworkRegion insRegion = NetworkRegion.US; //default to USA
+                    NetworkRegion insRegion = NetworkRegion.US_West; //default to USA
 
                     if (insString != null) //instanceID is empty if the portal is not placed by player in game
                     {
-                        if (!int.TryParse(insString, out int i)) //if the world is public and in USA, it has only instanceID (example: "55368") - skip to line 180
+                        if (!int.TryParse(insString, out int i)) //if the world is public and in USA West, it has only instanceID (example: "55368") - skip to line 180
                         {
                             string[] splitArray = insString.Split(char.Parse("~"));
                             insName = splitArray[0];
 
                             //get REGION
-                            if (splitArray.Length == 2) //if the world is public and in JP/EU, it has instanceID and region (example: "55368~region(eu)")
+                            if (splitArray.Length == 2) //if the world is public and in JP/EU/US-East, it has instanceID and region (example: "55368~region(eu)")
                             {
-                                string temp = splitArray[1].Split(char.Parse("("))[1].Remove(2);
-                                if (temp == "jp")
+                                string temp = splitArray[1].Split(char.Parse("("))[1];
+                                if (temp == "jp)")
                                 {
                                     insRegion = NetworkRegion.Japan;
+                                }
+                                else if (temp == "use)")
+                                {
+                                    insRegion = NetworkRegion.US_East;
+                                }
+                                else if (temp == "us)")
+                                {
+                                    insRegion = NetworkRegion.US_West;
                                 }
                                 else
                                 {
@@ -145,16 +158,24 @@ namespace PortalSelect
                             {
                                 if (splitArray[splitArray.Length - 2] == "canRequestInvite") //if we get "canRequestInvite" in the second position from end, it means that the instance is Invite+ and in USA (example: "55368~private(userID)~canRequestInvite~nonce(....)")
                                 {
-                                    insRegion = NetworkRegion.US;
+                                    insRegion = NetworkRegion.US_West;
                                 }
                                 else //if not, it means that the instance is not based in US (can be but with the splitArray at second position from back we will get userID, which is not equal to "jp" or "eu")
                                 {
-                                    string temp = splitArray[splitArray.Length - 2].Split(char.Parse("("))[1].Remove(2);
-                                    if (temp == "jp")
+                                    string temp = splitArray[splitArray.Length - 2].Split(char.Parse("("))[1];
+                                    if (temp == "jp)")
                                     {
                                         insRegion = NetworkRegion.Japan;
                                     }
-                                    else if (temp == "eu")
+                                    else if (temp == "use)")
+                                    {
+                                        insRegion = NetworkRegion.US_East;
+                                    }
+                                    else if (temp == "us)")
+                                    {
+                                        insRegion = NetworkRegion.US_West;
+                                    }
+                                    else
                                     {
                                         insRegion = NetworkRegion.Europe;
                                     }
@@ -194,11 +215,11 @@ namespace PortalSelect
                         } else //in USA and public
                         {
                             insName = insString;
-                            insRegion = NetworkRegion.US;
+                            insRegion = NetworkRegion.US_West;
                             insType = InstanceAccessType.Public;
                         }
 
-                        var instanceID = new ApiWorldInstance { name = insName, instanceId = insString, count = portalGet.field_Private_Int32_0, region = insRegion, type = insType, ownerId = insOwner};
+                        var instanceID = new ApiWorldInstance { name = insName, instanceId = insString, count = portalGet.field_Private_Int32_2, region = insRegion, type = insType, ownerId = insOwner};
 
                         OpenPage(world, instanceID, true);
                     } else
