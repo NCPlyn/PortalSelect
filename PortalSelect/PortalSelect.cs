@@ -18,7 +18,7 @@ namespace PortalSelect
         public const string Name = "PortalSelect";
         public const string Author = "NCPlyn";
         public const string Company = "NCPlyn";
-        public const string Version = "0.1.7";
+        public const string Version = "0.1.7.1";
         public const string DownloadLink = "https://github.com/NCPlyn/PortalSelect";
     }
 
@@ -220,7 +220,7 @@ namespace PortalSelect
                         }
 
                         var instanceID = new ApiWorldInstance { name = insName, instanceId = insString, count = portalGet.field_Private_Int32_2, region = insRegion, type = insType, ownerId = insOwner};
-
+                        
                         OpenPage(world, instanceID, true);
                     } else
                     {
